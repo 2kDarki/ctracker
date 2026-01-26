@@ -1,20 +1,14 @@
 import 'package:flutter/material.dart';
+
 import '../models/change_record.dart';
 import '../utils/cleanup.dart';
+import '../utils/time_format.dart';
 import 'themed_text.dart';
 
 class PaidRecordCard extends StatelessWidget {
   final ChangeRecord record;
 
   const PaidRecordCard({super.key, required this.record});
-
-  String _formatPaidDate(DateTime date) {
-    final diff = DateTime.now().difference(date).inDays;
-    if (diff == 0) return 'Paid today';
-    if (diff == 1) return 'Paid yesterday';
-    if (diff < 7) return 'Paid $diff days ago';
-    return 'Paid ${date.month}/${date.day}';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +54,7 @@ class PaidRecordCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   ThemedText(
                     record.paidAt != null
-                        ? _formatPaidDate(record.paidAt!)
+                        ? 'Paid ${DateTimeUtils.getRelativeTime(record.paidAt!)}'
                         : 'Paid',
                     type: TextType.small,
                     style: TextStyle(color: success),
@@ -68,7 +62,7 @@ class PaidRecordCard extends StatelessWidget {
                 ],
               ),
               ThemedText(
-                'Removes in $daysLeft days',
+                'Removed in $daysLeft days',
                 type: TextType.small,
               ),
             ],

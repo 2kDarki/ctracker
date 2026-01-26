@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../models/change_record.dart';
+import '../utils/time_format.dart';
 import 'themed_text.dart';
 import 'card.dart';
 
@@ -15,14 +17,6 @@ class RecordCard extends StatelessWidget {
   });
 
   String _formatAmount(double amount) => amount.toStringAsFixed(2);
-
-  String _formatDate(DateTime date) {
-    final diff = DateTime.now().difference(date).inDays;
-    if (diff == 0) return 'Today';
-    if (diff == 1) return 'Yesterday';
-    if (diff < 7) return '$diff days ago';
-    return '${date.month}/${date.day}';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +51,7 @@ class RecordCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 ThemedText(
-                  _formatDate(record.createdAt),
+                  DateTimeUtils.getRelativeTime(record.createdAt),
                   type: TextType.small,
                 ),
               ],

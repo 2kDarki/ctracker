@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models/change_record.dart';
 import '../stores/change_record_store.dart';
 import '../utils/cleanup.dart';
 
-// You will stub or implement these widgets next
 import '../widgets/tab_filter.dart';
 import '../widgets/record_card.dart';
 import '../widgets/paid_record_card.dart';
@@ -14,9 +14,7 @@ import '../widgets/loading_state.dart';
 enum TabOption { active, paid }
 
 class HomeScreen extends StatefulWidget {
-  final ChangeRecordStore store;
-
-  const HomeScreen({super.key, required this.store});
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -26,80 +24,147 @@ class _HomeScreenState extends State<HomeScreen> {
   TabOption _selectedTab = TabOption.active;
   String _searchQuery = '';
   bool _isRefreshing = false;
-  bool _isLoading = true;
 
-  List<ChangeRecord> _activeRecords = [];
-  List<ChangeRecord> _paidRecords = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadRecords();
-  }
-
-  Future<void> _loadRecords() async {
-    setState(() => _isLoading = true);
-
-    final active = widget.store.activeRecords;
-    final paid = widget.store.paidRecords;
-
-    setState(() {
-      _activeRecords = active;
-      _paidRecords = paid;
-      _isLoading = false;
-    });
-  }
-
-  Future<void> _refresh() async {
+  Future<void> _refresh(BuildContext context) async {
     setState(() => _isRefreshing = true);
-    await cleanupPaidRecords(widget.store);
-    await _loadRecords();
+    await cleanupPaidRecords(context.read<ChangeRecordStore>());
     setState(() => _isRefreshing = false);
   }
 
-  void _markAsPaid(String id) async {
-    final record = _activeRecords.firstWhere(
-      (r) => r.id == id,
-      orElse: () => throw StateError('Record not found'),
-    );
-
+  void _markAsPaid(BuildContext context, ChangeRecord record) async {
     record.markAsPaid();
-    await widget.store.updateRecord(record);
-    await _loadRecords();
+    await context.read<ChangeRecordStore>().updateRecord(record);
   }
 
-  void _onTabChange(TabOption tab) {
-    setState(() {
-      _selectedTab = tab;
-      _searchQuery = '';
-    });
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            padding: EdgeInsets.zero,
+            child: Stack(
+              children: [
+                // Background image fills the header
+                Image.asset(
+                  'assets/images/brand.png', // your pre-cropped image
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                ),
+                Container(),
+                Positioned(
+                  left: 16,
+                  bottom: 16,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'cTracker',
+                        style: TextStyle(
+                          color: Colors.deepPurple,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Track customer change easily',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Settings
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Settings'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/settings');
+            },
+          ),
+
+          // App info
+          ListTile(
+            leading: const Icon(Icons.info),
+            title: const Text('App Info'),
+            onTap: () {
+              showAboutDialog(
+                context: context,
+                applicationName: 'cTracker',
+                applicationVersion: 'v1.0.0 (1)',
+                applicationIcon: Image.asset(
+                  'assets/images/splash.png',
+                  width: 48,
+                  height: 48,
+                ),
+                children: const [
+                  Text('Simple app to track change owed to customers.'),
+                ],
+              );
+            },
+          ),
+
+          const Divider(),
+
+          // Exit
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Exit'),
+            onTap: () {
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final store = context.watch<ChangeRecordStore>();
+
+    final activeRecords = store.activeRecords;
+    final paidRecords = store.paidRecords;
+
     final records =
-        _selectedTab == TabOption.active ? _activeRecords : _paidRecords;
+        _selectedTab == TabOption.active ? activeRecords : paidRecords;
 
     final filtered = searchRecords(records, _searchQuery);
 
     return Scaffold(
+      drawer: _buildDrawer(context),
+      appBar: AppBar(
+        title: const Text('cTracker'),
+      ),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _refresh,
+          onRefresh: () => _refresh(context),
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
             physics: const AlwaysScrollableScrollPhysics(),
             itemCount: filtered.isEmpty ? 1 : filtered.length + 1,
             itemBuilder: (context, index) {
-              // Header
               if (index == 0) {
                 return Column(
                   children: [
                     TabFilter(
                       selected: _selectedTab,
-                      activeCount: _activeRecords.length,
-                      paidCount: _paidRecords.length,
-                      onChanged: _onTabChange,
+                      activeCount: activeRecords.length,
+                      paidCount: paidRecords.length,
+                      onChanged: (tab) {
+                        setState(() {
+                          _selectedTab = tab;
+                          _searchQuery = '';
+                        });
+                      },
                     ),
                     const SizedBox(height: 12),
                     SearchBar(
@@ -123,7 +188,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? RecordCard(
                         key: ValueKey(record.id),
                         record: record,
-                        onMarkPaid: () => _markAsPaid(record.id),
+                        onMarkPaid: () =>
+                            _markAsPaid(context, record),
                       )
                     : PaidRecordCard(
                         key: ValueKey(record.id),
@@ -134,11 +200,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.pushNamed(context, '/add'),
+        child: const Icon(Icons.add),
+      ),
     );
   }
 
   Widget _buildEmptyState() {
-    if (_isLoading) {
+    if (_isRefreshing) {
       return const LoadingState();
     }
 
@@ -159,28 +229,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return const EmptyState(
       title: 'No outstanding change',
       subtitle: 'Tap + to record change owed',
-    );
-  }
-}
-
-class ChangeTrackerApp extends StatelessWidget {
-  const ChangeTrackerApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<ChangeRecordStore>(
-      future: ChangeRecordStore.create(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const CircularProgressIndicator();
-        }
-        return MaterialApp(
-          title: 'Change Tracker',
-          theme: ThemeData.light(),
-          darkTheme: ThemeData.dark(),
-          home: HomeScreen(store: snapshot.data!),
-        );
-      },
     );
   }
 }
