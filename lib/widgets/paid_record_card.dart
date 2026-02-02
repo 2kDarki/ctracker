@@ -13,9 +13,8 @@ class PaidRecordCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final success = Colors.green;
-    final daysLeft = record.paidAt != null
-        ? getDaysUntilDeletion(record.paidAt!)
-        : 30;
+    final daysLeft =
+        record.paidAt != null ? getDaysUntilDeletion(record.paidAt!) : 30;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -62,7 +61,7 @@ class PaidRecordCard extends StatelessWidget {
                 ],
               ),
               ThemedText(
-                'Removed in $daysLeft days',
+                'Expires in $daysLeft days',
                 type: TextType.small,
               ),
             ],

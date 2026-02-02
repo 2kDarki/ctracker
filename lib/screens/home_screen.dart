@@ -47,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 // Background image fills the header
                 Image.asset(
-                  'assets/images/brand.png', // your pre-cropped image
+                  'assets/images/brand.png',
                   fit: BoxFit.cover,
                   width: double.infinity,
                   height: double.infinity,
@@ -111,17 +111,6 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-
-          const Divider(),
-
-          // Exit
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Exit'),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
         ],
       ),
     );
@@ -171,8 +160,26 @@ class _HomeScreenState extends State<HomeScreen> {
                       hintText: _selectedTab == TabOption.active
                           ? 'Search active records...'
                           : 'Search paid records...',
-                      onChanged: (v) =>
-                          setState(() => _searchQuery = v),
+                      onChanged: (v) => setState(() => _searchQuery = v),
+                      shape: WidgetStateProperty.resolveWith((states) {
+                        final isFocused = states.contains(WidgetState.focused);
+
+                        return RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: isFocused
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).colorScheme.outline,
+                            width: 1.2,
+                          ),
+                        );
+                      }),
+                      elevation: WidgetStateProperty.all(0),
+                      backgroundColor: WidgetStateProperty.all(
+                        Theme.of(context).colorScheme.surface,
+                      ),
+                      surfaceTintColor:
+                          WidgetStateProperty.all(Colors.transparent),
                     ),
                     const SizedBox(height: 16),
                     if (filtered.isEmpty) _buildEmptyState(),
@@ -188,8 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? RecordCard(
                         key: ValueKey(record.id),
                         record: record,
-                        onMarkPaid: () =>
-                            _markAsPaid(context, record),
+                        onMarkPaid: () => _markAsPaid(context, record),
                       )
                     : PaidRecordCard(
                         key: ValueKey(record.id),
